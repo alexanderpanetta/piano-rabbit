@@ -1,0 +1,285 @@
+@import "tailwindcss";
+
+/* Custom fonts for child-friendly UI */
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+/* CSS Variables for the game theme */
+:root {
+  --color-primary: #FFD700;
+  --color-success: #4CAF50;
+  --color-error: #F44336;
+  --color-white-key: #FFFFFF;
+  --color-black-key: #333333;
+  --color-bg-start: #E8F4FD;
+  --color-bg-end: #F3E8FF;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Nunito', system-ui, sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, var(--color-bg-start) 0%, var(--color-bg-end) 100%);
+  min-height: 100vh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Piano key animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px 2px rgba(255, 215, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 20px 8px rgba(255, 215, 0, 0.9);
+  }
+}
+
+@keyframes key-press {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes bounce-in {
+  0% { transform: scale(0) translateY(-100px); opacity: 0; }
+  50% { transform: scale(1.2) translateY(0); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes confetti-fall {
+  0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes celebrate {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-5deg); }
+  75% { transform: scale(1.1) rotate(5deg); }
+}
+
+@keyframes ear-twitch {
+  0%, 90%, 100% { transform: rotate(0deg); }
+  93% { transform: rotate(-5deg); }
+  96% { transform: rotate(5deg); }
+}
+
+@keyframes medal-drop {
+  0% { transform: translateY(-200px) rotate(-20deg); opacity: 0; }
+  60% { transform: translateY(20px) rotate(10deg); opacity: 1; }
+  80% { transform: translateY(-10px) rotate(-5deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(100%); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.animate-key-press {
+  animation: key-press 0.15s ease-out;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.6s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+.animate-celebrate {
+  animation: celebrate 0.5s ease-in-out infinite;
+}
+
+.animate-medal-drop {
+  animation: medal-drop 0.8s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+/* Piano styling */
+.piano-key-white {
+  background: linear-gradient(180deg, #FFFFFF 0%, #F5F5F5 100%);
+  border: 1px solid #D0D0D0;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 -2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.1s ease;
+}
+
+.piano-key-white:active,
+.piano-key-white.pressed {
+  background: linear-gradient(180deg, #F0F0F0 0%, #E8E8E8 100%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(2px);
+}
+
+.piano-key-white.highlighted {
+  background: linear-gradient(180deg, #FFF8DC 0%, #FFD700 100%);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.piano-key-white.correct {
+  background: linear-gradient(180deg, #C8E6C9 0%, #4CAF50 100%);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+}
+
+.piano-key-white.incorrect {
+  background: linear-gradient(180deg, #FFCDD2 0%, #F44336 100%);
+  animation: shake 0.3s ease-in-out;
+}
+
+.piano-key-black {
+  background: linear-gradient(180deg, #444444 0%, #222222 100%);
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+  transition: all 0.1s ease;
+}
+
+.piano-key-black:active,
+.piano-key-black.pressed {
+  background: linear-gradient(180deg, #333333 0%, #111111 100%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(2px);
+}
+
+.piano-key-black.highlighted {
+  background: linear-gradient(180deg, #B8860B 0%, #DAA520 100%);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.piano-key-black.correct {
+  background: linear-gradient(180deg, #2E7D32 0%, #1B5E20 100%);
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
+}
+
+.piano-key-black.incorrect {
+  background: linear-gradient(180deg, #C62828 0%, #B71C1C 100%);
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Speech bubble */
+.speech-bubble {
+  position: relative;
+  background: white;
+  border-radius: 20px;
+  padding: 16px 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 15px 15px 0;
+  border-style: solid;
+  border-color: white transparent transparent transparent;
+}
+
+/* Button styles */
+.game-button {
+  background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%);
+  border: none;
+  border-radius: 16px;
+  padding: 16px 32px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 165, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.game-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(255, 165, 0, 0.5);
+}
+
+.game-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(255, 165, 0, 0.4);
+}
+
+.game-button-secondary {
+  background: linear-gradient(180deg, #87CEEB 0%, #4682B4 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(70, 130, 180, 0.4);
+}
+
+.game-button-secondary:hover {
+  box-shadow: 0 6px 16px rgba(70, 130, 180, 0.5);
+}
+
+/* Level card styles */
+.level-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.level-card:hover:not(.locked) {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.level-card.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.level-card.current {
+  border: 3px solid #FFD700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+/* Confetti */
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  top: -20px;
+  animation: confetti-fall 3s linear forwards;
+}
