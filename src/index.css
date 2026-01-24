@@ -22,8 +22,9 @@
 
 html, body, #root {
   width: 100%;
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
   font-family: 'Nunito', system-ui, sans-serif;
 }
 

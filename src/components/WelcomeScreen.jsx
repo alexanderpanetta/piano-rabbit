@@ -82,14 +82,14 @@ const WelcomeScreen = ({
   // Returning user - simple welcome
   if (!showTutorial) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 py-8">
         <Rabbit
           state="waving"
           message="Welcome back! Ready to play?"
-          size="large"
+          size="medium"
         />
 
-        <div className="mt-8 flex flex-col sm:flex-row gap-4">
+        <div className="mt-6 flex flex-col sm:flex-row gap-4">
           <button
             onClick={onStart}
             className="game-button text-xl"
@@ -105,11 +105,11 @@ const WelcomeScreen = ({
   const currentStep = tutorialSteps[tutorialStep];
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 py-8">
       {/* Skip button */}
       <button
         onClick={handleSkip}
-        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 font-medium"
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 font-medium z-10"
       >
         Skip Tutorial
       </button>
@@ -120,7 +120,7 @@ const WelcomeScreen = ({
         <Rabbit
           state={currentStep.rabbitState}
           message={currentStep.message}
-          size="large"
+          size="medium"
         />
 
         {/* Tutorial piano (if needed) */}
