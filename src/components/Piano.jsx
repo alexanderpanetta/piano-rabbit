@@ -2,10 +2,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { PIANO_KEYS, WHITE_KEYS, KEYBOARD_MAP } from '../utils/lessonData';
 import { getNoteInputHandler } from '../utils/noteInputHandler';
 
-/**
- * Interactive Piano Keyboard Component
- * Realistic piano layout with proper black keys
- */
 const Piano = ({
   onNotePlay,
   highlightedNotes = [],
@@ -15,7 +11,6 @@ const Piano = ({
   showLabels = true
 }) => {
   const [pressedKeys, setPressedKeys] = useState(new Set());
-  const [feedbackKeys, setFeedbackKeys] = useState(new Map());
   const inputHandler = useRef(getNoteInputHandler());
 
   const handleKeyPress = useCallback((note) => {
@@ -35,18 +30,6 @@ const Piano = ({
   }, [disabled, onNotePlay]);
 
   useEffect(() => {
-    const newFeedback = new Map();
-    correctNotes.forEach(note => newFeedback.set(note, 'correct'));
-    incorrectNotes.forEach(note => newFeedback.set(note, 'incorrect'));
-    setFeedbackKeys(newFeedback);
-
-    if (correctNotes.length > 0 || incorrectNotes.length > 0) {
-      const timer = setTimeout(() => setFeedbackKeys(new Map()), 500);
-      return () => clearTimeout(timer);
-    }
-  }, [correctNotes, incorrectNotes]);
-
-  useEffect(() => {
     const handleKeyDown = (e) => {
       if (disabled) return;
       const note = KEYBOARD_MAP[e.key.toLowerCase()];
@@ -56,91 +39,143 @@ const Piano = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [disabled, handleKeyPress]);
 
-  const getKeyState = (note) => {
+  const getWhiteKeyStyle = (note) => {
     const isPressed = pressedKeys.has(note);
     const isHighlighted = highlightedNotes.includes(note);
-    const feedback = feedbackKeys.get(note);
-    return { isPressed, isHighlighted, isCorrect: feedback === 'correct', isIncorrect: feedback === 'incorrect' };
+    const isCorrect = correctNotes.includes(note);
+    const isIncorrect = incorrectNotes.includes(note);
+
+    let background = 'linear-gradient(to bottom, #ffffff 0%, #f0f0f0 100%)';
+    let boxShadow = '0 4px 6px rgba(0,0,0,0.1), inset 0 -4px 6px rgba(0,0,0,0.05)';
+
+    if (isHighlighted) {
+      background = 'linear-gradient(to bottom, #fff3cd 0%, #ffc107 100%)';
+      boxShadow = '0 0 20px rgba(255,193,7,0.8), 0 4px 6px rgba(0,0,0,0.1)';
+    }
+    if (isCorrect) {
+      background = 'linear-gradient(to bottom, #d4edda 0%, #28a745 100%)';
+      boxShadow = '0 0 20px rgba(40,167,69,0.8)';
+    }
+    if (isIncorrect) {
+      background = 'linear-gradient(to bottom, #f8d7da 0%, #dc3545 100%)';
+    }
+    if (isPressed) {
+      boxShadow = 'inset 0 4px 6px rgba(0,0,0,0.2)';
+    }
+
+    return {
+      flex: 1,
+      height: '100%',
+      background,
+      boxShadow,
+      border: '1px solid #ccc',
+      borderRadius: '0 0 8px 8px',
+      margin: '0 1px',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      paddingBottom: '8px',
+      transition: 'all 0.1s ease',
+      transform: isPressed ? 'translateY(2px)' : 'none',
+    };
   };
 
-  // Black key positions relative to white keys (which white key it's after)
+  const getBlackKeyStyle = (note) => {
+    const isPressed = pressedKeys.has(note);
+    const isHighlighted = highlightedNotes.includes(note);
+    const isCorrect = correctNotes.includes(note);
+    const isIncorrect = incorrectNotes.includes(note);
+
+    let background = 'linear-gradient(to bottom, #333 0%, #000 100%)';
+    let boxShadow = '2px 4px 6px rgba(0,0,0,0.5)';
+
+    if (isHighlighted) {
+      background = 'linear-gradient(to bottom, #d4a500 0%, #b8860b 100%)';
+      boxShadow = '0 0 15px rgba(255,193,7,0.8), 2px 4px 6px rgba(0,0,0,0.5)';
+    }
+    if (isCorrect) {
+      background = 'linear-gradient(to bottom, #1e7e34 0%, #155724 100%)';
+      boxShadow = '0 0 15px rgba(40,167,69,0.8)';
+    }
+    if (isIncorrect) {
+      background = 'linear-gradient(to bottom, #c82333 0%, #721c24 100%)';
+    }
+    if (isPressed) {
+      boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.5)';
+    }
+
+    return {
+      position: 'absolute',
+      width: '8%',
+      height: '60%',
+      background,
+      boxShadow,
+      borderRadius: '0 0 4px 4px',
+      cursor: 'pointer',
+      zIndex: 10,
+      transition: 'all 0.1s ease',
+      transform: isPressed ? 'translateY(2px)' : 'none',
+    };
+  };
+
+  // Black key positions (percentage from left, after which white key index)
   const blackKeyPositions = {
-    'C#4': 0, 'D#4': 1, 'F#4': 3, 'G#4': 4, 'A#4': 5,
-    'C#5': 7, 'D#5': 8
+    'C#4': 7.5,
+    'D#4': 17,
+    'F#4': 36,
+    'G#4': 45.5,
+    'A#4': 55,
+    'C#5': 74,
+    'D#5': 83.5,
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-2">
-      {/* Piano container */}
-      <div className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-lg p-3 shadow-2xl">
-        {/* White keys container */}
-        <div className="relative flex" style={{ height: '140px' }}>
-          {WHITE_KEYS.map((key, index) => {
-            const state = getKeyState(key.note);
-            return (
-              <button
-                key={key.note}
-                className={`
-                  relative flex-1 mx-[1px] rounded-b-md flex items-end justify-center pb-2
-                  font-bold text-sm transition-all duration-75 touch-manipulation
-                  ${state.isPressed ? 'translate-y-[2px]' : ''}
-                  ${state.isHighlighted
-                    ? 'bg-gradient-to-b from-yellow-200 to-yellow-400 shadow-[0_0_15px_rgba(255,215,0,0.8)]'
-                    : 'bg-gradient-to-b from-white via-gray-50 to-gray-100'}
-                  ${state.isCorrect ? 'bg-gradient-to-b from-green-200 to-green-400 shadow-[0_0_15px_rgba(34,197,94,0.8)]' : ''}
-                  ${state.isIncorrect ? 'bg-gradient-to-b from-red-200 to-red-400 animate-shake' : ''}
-                  border-x border-b border-gray-300
-                  shadow-[inset_0_-4px_8px_rgba(0,0,0,0.1),_0_2px_4px_rgba(0,0,0,0.2)]
-                `}
-                onTouchStart={(e) => { e.preventDefault(); handleKeyPress(key.note); }}
-                onMouseDown={() => handleKeyPress(key.note)}
-                disabled={disabled}
-              >
-                {showLabels && (
-                  <span className={`text-xs font-bold ${state.isHighlighted ? 'text-yellow-800' : 'text-gray-500'}`}>
-                    {key.label}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+    <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto', padding: '0 8px' }}>
+      {/* Piano frame */}
+      <div style={{
+        background: 'linear-gradient(to bottom, #2d2d2d 0%, #1a1a1a 100%)',
+        borderRadius: '12px',
+        padding: '12px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+      }}>
+        {/* Keys container */}
+        <div style={{ position: 'relative', height: '180px', display: 'flex' }}>
+          {/* White keys */}
+          {WHITE_KEYS.map((key) => (
+            <button
+              key={key.note}
+              style={getWhiteKeyStyle(key.note)}
+              onTouchStart={(e) => { e.preventDefault(); handleKeyPress(key.note); }}
+              onMouseDown={() => handleKeyPress(key.note)}
+              disabled={disabled}
+            >
+              {showLabels && (
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: highlightedNotes.includes(key.note) ? '#856404' : '#666',
+                  userSelect: 'none',
+                }}>
+                  {key.label}
+                </span>
+              )}
+            </button>
+          ))}
 
-        {/* Black keys overlay */}
-        <div className="absolute top-3 left-3 right-3 pointer-events-none" style={{ height: '85px' }}>
-          {PIANO_KEYS.filter(k => k.isBlack).map((key) => {
-            const state = getKeyState(key.note);
-            const whiteKeyIndex = blackKeyPositions[key.note];
-            const whiteKeyWidth = 100 / WHITE_KEYS.length;
-            const leftPos = (whiteKeyIndex + 1) * whiteKeyWidth - (whiteKeyWidth * 0.35);
-
-            return (
-              <button
-                key={key.note}
-                className={`
-                  absolute top-0 h-full pointer-events-auto touch-manipulation
-                  rounded-b-md transition-all duration-75
-                  ${state.isPressed ? 'translate-y-[2px] brightness-90' : ''}
-                  ${state.isHighlighted
-                    ? 'bg-gradient-to-b from-yellow-500 to-yellow-600 shadow-[0_0_15px_rgba(255,215,0,0.8)]'
-                    : 'bg-gradient-to-b from-gray-800 via-gray-900 to-black'}
-                  ${state.isCorrect ? 'bg-gradient-to-b from-green-600 to-green-800 shadow-[0_0_15px_rgba(34,197,94,0.8)]' : ''}
-                  ${state.isIncorrect ? 'bg-gradient-to-b from-red-600 to-red-800 animate-shake' : ''}
-                  shadow-[2px_4px_6px_rgba(0,0,0,0.5),_inset_0_-2px_4px_rgba(255,255,255,0.1)]
-                  border-x border-b border-gray-950
-                `}
-                style={{
-                  left: `${leftPos}%`,
-                  width: `${whiteKeyWidth * 0.7}%`,
-                  minWidth: '28px',
-                  zIndex: 20
-                }}
-                onTouchStart={(e) => { e.preventDefault(); handleKeyPress(key.note); }}
-                onMouseDown={() => handleKeyPress(key.note)}
-                disabled={disabled}
-              />
-            );
-          })}
+          {/* Black keys */}
+          {PIANO_KEYS.filter(k => k.isBlack).map((key) => (
+            <button
+              key={key.note}
+              style={{
+                ...getBlackKeyStyle(key.note),
+                left: `${blackKeyPositions[key.note]}%`,
+              }}
+              onTouchStart={(e) => { e.preventDefault(); handleKeyPress(key.note); }}
+              onMouseDown={() => handleKeyPress(key.note)}
+              disabled={disabled}
+            />
+          ))}
         </div>
       </div>
     </div>

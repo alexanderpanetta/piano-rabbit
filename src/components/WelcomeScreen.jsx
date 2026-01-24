@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import Rabbit from './Rabbit';
 
-const WelcomeScreen = ({
-  isFirstTime = true,
-  onStart,
-  onSkipTutorial
-}) => {
+const WelcomeScreen = ({ isFirstTime = true, onStart, onSkipTutorial }) => {
   const [step, setStep] = useState(0);
 
   const tutorialSteps = [
-    { message: "Hi! I'm Rabbit! Let's learn piano together!" },
-    { message: "I'll show you which keys to play - they'll glow yellow!" },
-    { message: "Tap the glowing keys to play. Ready?" }
+    "Hi! I'm Rabbit! Let's learn piano together!",
+    "I'll show you which keys to play - they'll glow yellow!",
+    "Tap the glowing keys to play. Ready?"
   ];
 
   const handleNext = () => {
@@ -22,60 +17,107 @@ const WelcomeScreen = ({
     }
   };
 
-  const handleSkip = () => {
-    onSkipTutorial?.();
-    onStart();
-  };
-
-  // Returning user
   if (!isFirstTime) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center p-4 gap-6">
-        <Rabbit
-          state="waving"
-          message="Welcome back! Ready to play?"
-          size="large"
-        />
-        <button onClick={onStart} className="game-button text-xl">
+      <div style={styles.container}>
+        <span style={styles.rabbit}>🐰</span>
+        <div style={styles.bubble}>
+          <p style={styles.message}>Welcome back! Ready to play?</p>
+        </div>
+        <button onClick={onStart} style={styles.button}>
           Let's Play!
         </button>
       </div>
     );
   }
 
-  // First time - tutorial
   return (
-    <div className="h-screen flex flex-col items-center justify-center p-4 gap-6">
-      <button
-        onClick={handleSkip}
-        className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 font-medium"
-      >
+    <div style={styles.container}>
+      <button onClick={() => { onSkipTutorial?.(); onStart(); }} style={styles.skipBtn}>
         Skip
       </button>
 
-      <Rabbit
-        state="waving"
-        message={tutorialSteps[step].message}
-        size="large"
-      />
+      <span style={styles.rabbit}>🐰</span>
+      <div style={styles.bubble}>
+        <p style={styles.message}>{tutorialSteps[step]}</p>
+      </div>
 
-      {/* Progress dots */}
-      <div className="flex gap-2">
+      <div style={styles.dots}>
         {tutorialSteps.map((_, i) => (
-          <div
-            key={i}
-            className={`w-3 h-3 rounded-full ${
-              i === step ? 'bg-yellow-500' : 'bg-gray-300'
-            }`}
-          />
+          <div key={i} style={{
+            ...styles.dot,
+            background: i === step ? '#ffc107' : '#ccc',
+          }} />
         ))}
       </div>
 
-      <button onClick={handleNext} className="game-button text-xl">
+      <button onClick={handleNext} style={styles.button}>
         {step === tutorialSteps.length - 1 ? "Let's Start!" : 'Next'}
       </button>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '24px',
+    padding: '20px',
+    background: 'linear-gradient(135deg, #e8f4fd 0%, #f3e8ff 100%)',
+    fontFamily: "'Nunito', sans-serif",
+    position: 'relative',
+  },
+  rabbit: {
+    fontSize: '100px',
+  },
+  bubble: {
+    background: 'white',
+    borderRadius: '20px',
+    padding: '20px 32px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+    maxWidth: '400px',
+    textAlign: 'center',
+  },
+  message: {
+    fontSize: '22px',
+    fontWeight: 'bold',
+    color: '#333',
+    margin: 0,
+  },
+  dots: {
+    display: 'flex',
+    gap: '8px',
+  },
+  dot: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+  },
+  button: {
+    background: 'linear-gradient(to bottom, #ffd700 0%, #ffa500 100%)',
+    border: 'none',
+    borderRadius: '16px',
+    padding: '16px 40px',
+    fontSize: '22px',
+    fontWeight: 'bold',
+    color: '#333',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(255,165,0,0.4)',
+  },
+  skipBtn: {
+    position: 'absolute',
+    top: '20px',
+    right: '20px',
+    background: 'none',
+    border: 'none',
+    fontSize: '16px',
+    color: '#666',
+    cursor: 'pointer',
+  },
 };
 
 export default WelcomeScreen;
