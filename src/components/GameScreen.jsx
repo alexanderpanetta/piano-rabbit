@@ -157,7 +157,7 @@ const GameScreen = ({
   if (!isAudioReady) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <Rabbit state="waiting" message="Loading sounds..." size="large" />
+        <Rabbit state="waiting" message="Loading sounds..." size="small" />
         <button
           onClick={initAudio}
           className="game-button mt-4"
@@ -169,7 +169,7 @@ const GameScreen = ({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Confetti */}
       <Confetti active={showConfetti} />
 
@@ -183,13 +183,13 @@ const GameScreen = ({
       />
 
       {/* Main game area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-2 gap-4">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-1 gap-2 min-h-0">
         {/* Rabbit and instruction */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center flex-shrink-0">
           <Rabbit
             state={rabbitState}
             message={getRabbitMessage()}
-            size="medium"
+            size="small"
           />
         </div>
 
