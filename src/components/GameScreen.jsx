@@ -9,11 +9,6 @@ import { useGameState, GAME_STATES, TASK_RESULT } from '../hooks/useGameState';
 import { useAudio } from '../hooks/useAudio';
 import { lessons } from '../utils/lessonData';
 
-/**
- * GameScreen Component
- *
- * Main gameplay screen combining all game elements
- */
 const GameScreen = ({
   levelId,
   onComplete,
@@ -23,9 +18,8 @@ const GameScreen = ({
   const [showConfetti, setShowConfetti] = useState(false);
   const [correctFeedbackNote, setCorrectFeedbackNote] = useState(null);
   const [incorrectFeedbackNote, setIncorrectFeedbackNote] = useState(null);
-  const [rabbitState, setRabbitState] = useState('teaching');
+  const [rabbitState, setRabbitState] = useState('neutral');
 
-  // Audio hook
   const {
     isAudioReady,
     initAudio,
@@ -35,7 +29,6 @@ const GameScreen = ({
     playMedalSound
   } = useAudio();
 
-  // Game state hook
   const {
     gameState,
     currentTaskIndex,
@@ -58,17 +51,15 @@ const GameScreen = ({
       setRabbitState('celebrating');
       setTimeout(() => {
         setShowConfetti(false);
-        setRabbitState('teaching');
+        setRabbitState('neutral');
       }, 1200);
     },
     onIncorrect: () => {
       playIncorrect();
       setRabbitState('sad');
-      setTimeout(() => {
-        setRabbitState('pointing');
-      }, 800);
+      setTimeout(() => setRabbitState('pointing'), 800);
     },
-    onLevelComplete: (levelId, medal, finalScore) => {
+    onLevelComplete: (levelId, medal) => {
       playMedalSound(medal);
       if (medal === 'gold') {
         setShowConfetti(true);
@@ -81,28 +72,19 @@ const GameScreen = ({
     }
   });
 
-  // Initialize audio and start level
   useEffect(() => {
     const init = async () => {
       await initAudio();
       startLevel(levelId);
     };
     init();
-
-    return () => {
-      reset();
-    };
+    return () => reset();
   }, [levelId]);
 
-  // Handle piano key press
   const handleKeyPress = useCallback((note) => {
-    // Play the note sound
     playNote(note);
-
-    // Process the note for game logic
     handleNoteInput(note);
 
-    // Visual feedback
     if (highlightedNotes.includes(note)) {
       setCorrectFeedbackNote(note);
       setTimeout(() => setCorrectFeedbackNote(null), 300);
@@ -112,20 +94,16 @@ const GameScreen = ({
     }
   }, [playNote, handleNoteInput, highlightedNotes, gameState]);
 
-  // Handle level completion actions
   const handlePlayAgain = () => {
     setShowConfetti(false);
-    setRabbitState('teaching');
+    setRabbitState('neutral');
     retryLevel();
   };
 
   const handleNextLevel = () => {
     setShowConfetti(false);
-    if (hasNextLevel) {
-      const nextLevelId = levelId + 1;
-      if (lessons[nextLevelId]) {
-        onComplete(levelId, score);
-      }
+    if (hasNextLevel && lessons[levelId + 1]) {
+      onComplete(levelId, score);
     }
   };
 
@@ -134,86 +112,64 @@ const GameScreen = ({
     onHome();
   };
 
-  // Get rabbit message based on game state
   const getRabbitMessage = () => {
     if (gameState === GAME_STATES.FEEDBACK) {
       if (taskResult === TASK_RESULT.CORRECT) {
-        const praises = ["Great job!", "Awesome!", "Perfect!", "Well done!", "You got it!"];
+        const praises = ["Great job!", "Awesome!", "Perfect!", "You got it!"];
         return praises[Math.floor(Math.random() * praises.length)];
       } else {
-        const encouragements = ["Try again!", "You can do it!", "Keep going!", "Almost!"];
-        return encouragements[Math.floor(Math.random() * encouragements.length)];
+        return "Try again!";
       }
     }
-
-    if (currentTask) {
-      return currentTask.instruction;
-    }
-
-    return "Let's play!";
+    return currentTask?.instruction || "Let's play!";
   };
 
-  // Audio not ready - show loading
   if (!isAudioReady) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4">
-        <Rabbit state="waiting" message="Loading sounds..." size="small" />
-        <button
-          onClick={initAudio}
-          className="game-button mt-4"
-        >
-          Tap to Start
+      <div className="h-screen flex flex-col items-center justify-center p-4 gap-4">
+        <Rabbit state="waiting" message="Tap to start!" size="medium" />
+        <button onClick={initAudio} className="game-button">
+          Start Playing
         </button>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      {/* Confetti */}
+    <div className="h-screen flex flex-col">
       <Confetti active={showConfetti} />
 
-      {/* Header */}
-      <ScoreDisplay
-        levelName={currentLesson?.name || ''}
-        currentTask={currentTaskIndex}
-        totalTasks={totalTasks}
-        score={score}
-        onHomeClick={handleHome}
-      />
+      {/* Header - fixed height */}
+      <div className="flex-shrink-0">
+        <ScoreDisplay
+          levelName={currentLesson?.name || ''}
+          currentTask={currentTaskIndex}
+          totalTasks={totalTasks}
+          score={score}
+          onHomeClick={handleHome}
+        />
+      </div>
 
-      {/* Main game area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-1 gap-2 min-h-0">
-        {/* Rabbit and instruction */}
-        <div className="flex flex-col items-center flex-shrink-0">
-          <Rabbit
-            state={rabbitState}
-            message={getRabbitMessage()}
-            size="small"
-          />
-        </div>
+      {/* Middle section - rabbit and task */}
+      <div className="flex-shrink-0 flex flex-col items-center px-4 py-2">
+        <Rabbit
+          state={rabbitState}
+          message={getRabbitMessage()}
+          size="small"
+        />
 
-        {/* Task display */}
         {currentTask && gameState === GAME_STATES.PLAYING && (
-          <TaskDisplay
-            instruction=""
-            displayNotes={currentTask.displayNotes}
-            taskType={currentTask.type}
-            sequenceProgress={sequenceProgress}
-            totalNotes={currentTask.notes?.length || 1}
-          />
-        )}
-
-        {/* Retries indicator for sequences/diads */}
-        {currentTask?.type !== 'single' && retriesLeft < 2 && gameState === GAME_STATES.PLAYING && (
-          <div className="text-sm text-gray-500">
-            {retriesLeft === 1 ? '1 try left' : 'Last try!'}
+          <div className="mt-2">
+            <TaskDisplay
+              displayNotes={currentTask.displayNotes}
+              taskType={currentTask.type}
+              sequenceProgress={sequenceProgress}
+            />
           </div>
         )}
 
-        {/* Feedback display */}
         {gameState === GAME_STATES.FEEDBACK && (
-          <div className={`text-4xl sm:text-5xl font-bold animate-bounce-in ${
+          <div className={`text-5xl font-bold mt-2 ${
             taskResult === TASK_RESULT.CORRECT ? 'text-green-500' : 'text-red-400'
           }`}>
             {taskResult === TASK_RESULT.CORRECT ? '✓' : '✗'}
@@ -221,8 +177,8 @@ const GameScreen = ({
         )}
       </div>
 
-      {/* Piano */}
-      <div className="pb-4 sm:pb-8">
+      {/* Piano - takes remaining space at bottom */}
+      <div className="flex-1 flex items-end pb-4">
         <Piano
           onNotePlay={handleKeyPress}
           highlightedNotes={gameState === GAME_STATES.PLAYING ? highlightedNotes : []}
@@ -233,7 +189,6 @@ const GameScreen = ({
         />
       </div>
 
-      {/* Level complete modal */}
       {gameState === GAME_STATES.COMPLETE && (
         <MedalDisplay
           medal={score >= 9 ? 'gold' : score >= 7 ? 'silver' : score >= 5 ? 'bronze' : 'none'}
