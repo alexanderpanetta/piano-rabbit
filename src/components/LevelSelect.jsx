@@ -6,7 +6,8 @@ const LevelSelect = ({
   recommendedLevel = 1,
   totalStars = 0,
   onSelectLevel,
-  onBack
+  onBack,
+  onReset
 }) => {
   const levelIds = Object.keys(lessons).map(Number).sort((a, b) => a - b);
 
@@ -26,6 +27,22 @@ const LevelSelect = ({
       </div>
 
       <h1 style={styles.title}>Choose a Level</h1>
+
+      {/* Reset button */}
+      {onReset && (
+        <div style={styles.resetContainer}>
+          <button
+            onClick={() => {
+              if (window.confirm('Start over from the beginning? This will erase all progress.')) {
+                onReset();
+              }
+            }}
+            style={styles.resetBtn}
+          >
+            Start Over
+          </button>
+        </div>
+      )}
 
       {/* Level grid */}
       <div style={styles.grid}>
@@ -149,6 +166,19 @@ const styles = {
     borderRadius: '12px',
     fontSize: '12px',
     fontWeight: 'bold',
+  },
+  resetContainer: {
+    textAlign: 'center',
+    marginBottom: '20px',
+  },
+  resetBtn: {
+    background: 'none',
+    border: '1px solid #ccc',
+    borderRadius: '8px',
+    padding: '8px 16px',
+    fontSize: '14px',
+    color: '#999',
+    cursor: 'pointer',
   },
 };
 

@@ -32,7 +32,8 @@ function App() {
     completeLevel,
     setCurrentLevel,
     markTutorialSeen,
-    getNextLevel
+    getNextLevel,
+    resetProgress
   } = useProgress();
 
   // Audio initialization
@@ -85,6 +86,12 @@ function App() {
     setCurrentScreen(SCREENS.WELCOME);
   }, []);
 
+  // Handle reset progress
+  const handleReset = useCallback(() => {
+    resetProgress();
+    setCurrentScreen(SCREENS.WELCOME);
+  }, [resetProgress]);
+
   // Show loading while progress loads
   if (!isLoaded) {
     return (
@@ -127,6 +134,7 @@ function App() {
             totalStars={progress.totalStarsEarned}
             onSelectLevel={handleSelectLevel}
             onBack={handleBackFromLevelSelect}
+            onReset={handleReset}
           />
         );
 
