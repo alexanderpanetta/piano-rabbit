@@ -88,12 +88,37 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
 
   /**
    * Get notes that should be highlighted for the current task
-   * Currently returns empty - no hints shown on piano keys
-   * The instruction text tells the player which note to play
+   * Only highlights for sequences/diads where multiple keys have same label
    */
   const getHighlightedNotes = useCallback(() => {
-    // No highlighting - player must learn the note positions
-    return [];
+    if (gameStateRef.current !== GAME_STATES.PLAYING) return [];
+
+    const levelId = currentLevelIdRef.current;
+    const taskIdx = currentTaskIndexRef.current;
+    const lesson = levelId ? lessons[levelId] : null;
+    const task = lesson?.tasks[taskIdx];
+
+    if (!task) return [];
+
+    switch (task.type) {
+      case 'single':
+        // No highlighting for single notes - they must learn the positions
+        return [];
+      case 'sequence':
+        // Highlight the next note in the sequence (needed because C4 vs C5, D4 vs D5, etc.)
+        const seqProgress = sequenceProgressRef.current;
+        const nextNoteIndex = seqProgress.length;
+        if (nextNoteIndex < task.notes.length) {
+          return [task.notes[nextNoteIndex]];
+        }
+        return [];
+      case 'diad':
+        // Highlight notes not yet played (needed because multiple keys have same label)
+        const diadProg = diadProgressRef.current;
+        return task.notes.filter(note => !diadProg.includes(note));
+      default:
+        return [];
+    }
   }, []);
 
   /**

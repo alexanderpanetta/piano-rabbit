@@ -74,15 +74,9 @@ const GameScreen = ({
   const handleKeyPress = useCallback((note) => {
     playNote(note);
     handleNoteInput(note);
-
-    if (highlightedNotes.includes(note)) {
-      setCorrectFeedbackNote(note);
-      setTimeout(() => setCorrectFeedbackNote(null), 300);
-    } else if (gameState === GAME_STATES.PLAYING) {
-      setIncorrectFeedbackNote(note);
-      setTimeout(() => setIncorrectFeedbackNote(null), 300);
-    }
-  }, [playNote, handleNoteInput, highlightedNotes, gameState]);
+    // Note: Visual feedback (green/red key flash) removed to avoid confusion
+    // The game shows ✓ or ✗ feedback for correct/incorrect answers instead
+  }, [playNote, handleNoteInput]);
 
   const getMessage = () => {
     if (gameState === GAME_STATES.FEEDBACK) {
