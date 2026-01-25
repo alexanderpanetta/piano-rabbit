@@ -145,101 +145,22 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
     setGameState(GAME_STATES.PLAYING);
   }, []);
 
-  /**
-   * Move to the next task or complete the level
-   * Uses refs to avoid stale closure issues when called from setTimeout
-   */
-  const nextTask = useCallback(() => {
-    const idx = currentTaskIndexRef.current;
-    const finalScore = scoreRef.current;
-    const levelId = currentLevelIdRef.current;
-    const lesson = levelId ? lessons[levelId] : null;
-    const total = lesson?.tasks.length || 10;
 
-    if (idx + 1 >= total) {
-      // Level complete
-      const medal = getMedalForScore(finalScore, total);
-      gameStateRef.current = GAME_STATES.COMPLETE;
-      setGameState(GAME_STATES.COMPLETE);
-      onLevelComplete?.(levelId, medal, finalScore);
-    } else {
-      // Next task - update ALL refs and state
-      const newRetries = lesson?.tasks[idx + 1]?.maxRetries || 2;
-      currentTaskIndexRef.current = idx + 1;
-      sequenceProgressRef.current = [];
-      diadProgressRef.current = [];
-      retriesLeftRef.current = newRetries;
-      gameStateRef.current = GAME_STATES.PLAYING;
+  // Refs to store latest callback functions (avoids stale closure issues)
+  const onCorrectRef = useRef(onCorrect);
+  const onIncorrectRef = useRef(onIncorrect);
+  const onLevelCompleteRef = useRef(onLevelComplete);
 
-      setCurrentTaskIndex(idx + 1);
-      setTaskResult(TASK_RESULT.PENDING);
-      setSequenceProgress([]);
-      setDiadProgress([]);
-      setRetriesLeft(newRetries);
-      setGameState(GAME_STATES.PLAYING);
-    }
-  }, [onLevelComplete]);
-
-  /**
-   * Handle a correct task completion
-   */
-  const handleCorrect = useCallback(() => {
-    // Update refs immediately to avoid stale closure in timeout
-    scoreRef.current = scoreRef.current + 1;
-    gameStateRef.current = GAME_STATES.FEEDBACK;
-
-    setTaskResult(TASK_RESULT.CORRECT);
-    setScore(scoreRef.current);
-    setGameState(GAME_STATES.FEEDBACK);
-    onCorrect?.();
-
-    // Auto-advance after feedback delay
-    setTimeout(() => {
-      nextTask();
-    }, 1200);
-  }, [onCorrect, nextTask]);
-
-  /**
-   * Handle an incorrect attempt
-   * Uses refs for ALL state to avoid stale closure issues
-   */
-  const handleIncorrect = useCallback(() => {
-    onIncorrect?.();
-
-    // Get fresh values from refs
-    const levelId = currentLevelIdRef.current;
-    const taskIdx = currentTaskIndexRef.current;
-    const lesson = levelId ? lessons[levelId] : null;
-    const task = lesson?.tasks[taskIdx];
-    const retries = retriesLeftRef.current;
-
-    if (task?.type !== 'single' && retries > 0) {
-      // For sequences/diads, allow retries
-      retriesLeftRef.current = retries - 1;
-      sequenceProgressRef.current = [];
-      diadProgressRef.current = [];
-      setRetriesLeft(retries - 1);
-      setSequenceProgress([]);
-      setDiadProgress([]);
-      setTaskResult(TASK_RESULT.PENDING);
-    } else {
-      // No retries left or single note task
-      setTaskResult(TASK_RESULT.INCORRECT);
-      gameStateRef.current = GAME_STATES.FEEDBACK;
-      setGameState(GAME_STATES.FEEDBACK);
-
-      // Auto-advance after feedback delay
-      setTimeout(() => {
-        nextTask();
-      }, 1200);
-    }
-  }, [onIncorrect, nextTask]);
+  // Keep callback refs updated
+  useEffect(() => { onCorrectRef.current = onCorrect; }, [onCorrect]);
+  useEffect(() => { onIncorrectRef.current = onIncorrect; }, [onIncorrect]);
+  useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
 
   /**
    * Process a note input from the player
-   * Uses refs for ALL state to avoid stale closure issues
+   * This function reads ALL values from refs to avoid ANY stale closure issues
    */
-  const handleNoteInput = useCallback((note) => {
+  const handleNoteInput = (note) => {
     // Use ref for gameState check
     if (gameStateRef.current !== GAME_STATES.PLAYING) return;
 
@@ -253,12 +174,98 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
 
     if (!task) return;
 
+    // Helper to handle correct answer
+    const doCorrect = () => {
+      scoreRef.current = scoreRef.current + 1;
+      gameStateRef.current = GAME_STATES.FEEDBACK;
+      setTaskResult(TASK_RESULT.CORRECT);
+      setScore(scoreRef.current);
+      setGameState(GAME_STATES.FEEDBACK);
+      onCorrectRef.current?.();
+
+      setTimeout(() => {
+        const idx = currentTaskIndexRef.current;
+        const finalScore = scoreRef.current;
+        const lvlId = currentLevelIdRef.current;
+        const lsn = lvlId ? lessons[lvlId] : null;
+        const total = lsn?.tasks.length || 10;
+
+        if (idx + 1 >= total) {
+          const medal = getMedalForScore(finalScore, total);
+          gameStateRef.current = GAME_STATES.COMPLETE;
+          setGameState(GAME_STATES.COMPLETE);
+          onLevelCompleteRef.current?.(lvlId, medal, finalScore);
+        } else {
+          const newRetries = lsn?.tasks[idx + 1]?.maxRetries || 2;
+          currentTaskIndexRef.current = idx + 1;
+          sequenceProgressRef.current = [];
+          diadProgressRef.current = [];
+          retriesLeftRef.current = newRetries;
+          gameStateRef.current = GAME_STATES.PLAYING;
+          setCurrentTaskIndex(idx + 1);
+          setTaskResult(TASK_RESULT.PENDING);
+          setSequenceProgress([]);
+          setDiadProgress([]);
+          setRetriesLeft(newRetries);
+          setGameState(GAME_STATES.PLAYING);
+        }
+      }, 1200);
+    };
+
+    // Helper to handle incorrect answer
+    const doIncorrect = () => {
+      onIncorrectRef.current?.();
+      const retries = retriesLeftRef.current;
+
+      if (task?.type !== 'single' && retries > 0) {
+        retriesLeftRef.current = retries - 1;
+        sequenceProgressRef.current = [];
+        diadProgressRef.current = [];
+        setRetriesLeft(retries - 1);
+        setSequenceProgress([]);
+        setDiadProgress([]);
+        setTaskResult(TASK_RESULT.PENDING);
+      } else {
+        setTaskResult(TASK_RESULT.INCORRECT);
+        gameStateRef.current = GAME_STATES.FEEDBACK;
+        setGameState(GAME_STATES.FEEDBACK);
+
+        setTimeout(() => {
+          const idx = currentTaskIndexRef.current;
+          const finalScore = scoreRef.current;
+          const lvlId = currentLevelIdRef.current;
+          const lsn = lvlId ? lessons[lvlId] : null;
+          const total = lsn?.tasks.length || 10;
+
+          if (idx + 1 >= total) {
+            const medal = getMedalForScore(finalScore, total);
+            gameStateRef.current = GAME_STATES.COMPLETE;
+            setGameState(GAME_STATES.COMPLETE);
+            onLevelCompleteRef.current?.(lvlId, medal, finalScore);
+          } else {
+            const newRetries = lsn?.tasks[idx + 1]?.maxRetries || 2;
+            currentTaskIndexRef.current = idx + 1;
+            sequenceProgressRef.current = [];
+            diadProgressRef.current = [];
+            retriesLeftRef.current = newRetries;
+            gameStateRef.current = GAME_STATES.PLAYING;
+            setCurrentTaskIndex(idx + 1);
+            setTaskResult(TASK_RESULT.PENDING);
+            setSequenceProgress([]);
+            setDiadProgress([]);
+            setRetriesLeft(newRetries);
+            setGameState(GAME_STATES.PLAYING);
+          }
+        }, 1200);
+      }
+    };
+
     switch (task.type) {
       case 'single':
         if (note === task.note) {
-          handleCorrect();
+          doCorrect();
         } else {
-          handleIncorrect();
+          doIncorrect();
         }
         break;
 
@@ -270,47 +277,39 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
           setSequenceProgress(newProgress);
 
           if (newProgress.length === task.notes.length) {
-            // Sequence complete
-            handleCorrect();
+            doCorrect();
           }
         } else {
-          // Wrong note in sequence
-          handleIncorrect();
+          doIncorrect();
         }
         break;
 
       case 'diad':
-        // Clear any existing timeout
         if (diadTimeoutRef.current) {
           clearTimeout(diadTimeoutRef.current);
         }
 
-        // Check if this note is one of the expected notes
         if (task.notes.includes(note) && !diadProg.includes(note)) {
           const newProgress = [...diadProg, note];
           diadProgressRef.current = newProgress;
           setDiadProgress(newProgress);
 
           if (newProgress.length === task.notes.length) {
-            // All notes played
-            handleCorrect();
+            doCorrect();
           } else {
-            // Wait for more notes (with timeout)
             diadTimeoutRef.current = setTimeout(() => {
-              // Timeout - not all notes played together
-              handleIncorrect();
+              doIncorrect();
             }, 1000);
           }
         } else {
-          // Wrong note or duplicate
-          handleIncorrect();
+          doIncorrect();
         }
         break;
 
       default:
         break;
     }
-  }, [handleCorrect, handleIncorrect]);
+  };
 
   /**
    * Reset the game state
