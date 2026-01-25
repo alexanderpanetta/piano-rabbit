@@ -43,10 +43,14 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
   // Note input handler reference
   const inputHandlerRef = useRef(null);
 
-  // Refs to track current values for use in timeouts (avoid stale closures)
+  // Refs to track current values for use in callbacks (avoid stale closures)
   const currentTaskIndexRef = useRef(0);
   const scoreRef = useRef(0);
   const currentLevelIdRef = useRef(null);
+  const sequenceProgressRef = useRef([]);
+  const diadProgressRef = useRef([]);
+  const retriesLeftRef = useRef(2);
+  const gameStateRef = useRef(GAME_STATES.IDLE);
 
   // Keep refs in sync with state
   useEffect(() => {
@@ -60,6 +64,22 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
   useEffect(() => {
     currentLevelIdRef.current = currentLevelId;
   }, [currentLevelId]);
+
+  useEffect(() => {
+    sequenceProgressRef.current = sequenceProgress;
+  }, [sequenceProgress]);
+
+  useEffect(() => {
+    diadProgressRef.current = diadProgress;
+  }, [diadProgress]);
+
+  useEffect(() => {
+    retriesLeftRef.current = retriesLeft;
+  }, [retriesLeft]);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
 
   // Get current lesson and task
   const currentLesson = currentLevelId ? lessons[currentLevelId] : null;
@@ -80,10 +100,14 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
    * Start a new level
    */
   const startLevel = useCallback((levelId) => {
-    // Update refs immediately for use in callbacks
+    // Update ALL refs immediately for use in callbacks
     currentLevelIdRef.current = levelId;
     currentTaskIndexRef.current = 0;
     scoreRef.current = 0;
+    sequenceProgressRef.current = [];
+    diadProgressRef.current = [];
+    retriesLeftRef.current = 2;
+    gameStateRef.current = GAME_STATES.PLAYING;
 
     // Update state
     setCurrentLevelId(levelId);
@@ -110,16 +134,23 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
     if (idx + 1 >= total) {
       // Level complete
       const medal = getMedalForScore(finalScore, total);
+      gameStateRef.current = GAME_STATES.COMPLETE;
       setGameState(GAME_STATES.COMPLETE);
       onLevelComplete?.(levelId, medal, finalScore);
     } else {
-      // Next task - update both ref and state
+      // Next task - update ALL refs and state
+      const newRetries = lesson?.tasks[idx + 1]?.maxRetries || 2;
       currentTaskIndexRef.current = idx + 1;
+      sequenceProgressRef.current = [];
+      diadProgressRef.current = [];
+      retriesLeftRef.current = newRetries;
+      gameStateRef.current = GAME_STATES.PLAYING;
+
       setCurrentTaskIndex(idx + 1);
       setTaskResult(TASK_RESULT.PENDING);
       setSequenceProgress([]);
       setDiadProgress([]);
-      setRetriesLeft(lesson?.tasks[idx + 1]?.maxRetries || 2);
+      setRetriesLeft(newRetries);
       setGameState(GAME_STATES.PLAYING);
     }
   }, [onLevelComplete]);
@@ -128,8 +159,9 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
    * Handle a correct task completion
    */
   const handleCorrect = useCallback(() => {
-    // Update ref immediately to avoid stale closure in timeout
+    // Update refs immediately to avoid stale closure in timeout
     scoreRef.current = scoreRef.current + 1;
+    gameStateRef.current = GAME_STATES.FEEDBACK;
 
     setTaskResult(TASK_RESULT.CORRECT);
     setScore(scoreRef.current);
@@ -144,26 +176,31 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
 
   /**
    * Handle an incorrect attempt
-   * Uses refs to get current task to avoid stale closure issues
+   * Uses refs for ALL state to avoid stale closure issues
    */
   const handleIncorrect = useCallback(() => {
     onIncorrect?.();
 
-    // Get fresh task from refs
+    // Get fresh values from refs
     const levelId = currentLevelIdRef.current;
     const taskIdx = currentTaskIndexRef.current;
     const lesson = levelId ? lessons[levelId] : null;
     const task = lesson?.tasks[taskIdx];
+    const retries = retriesLeftRef.current;
 
-    if (task?.type !== 'single' && retriesLeft > 0) {
+    if (task?.type !== 'single' && retries > 0) {
       // For sequences/diads, allow retries
-      setRetriesLeft(prev => prev - 1);
+      retriesLeftRef.current = retries - 1;
+      sequenceProgressRef.current = [];
+      diadProgressRef.current = [];
+      setRetriesLeft(retries - 1);
       setSequenceProgress([]);
       setDiadProgress([]);
       setTaskResult(TASK_RESULT.PENDING);
     } else {
       // No retries left or single note task
       setTaskResult(TASK_RESULT.INCORRECT);
+      gameStateRef.current = GAME_STATES.FEEDBACK;
       setGameState(GAME_STATES.FEEDBACK);
 
       // Auto-advance after feedback delay
@@ -171,20 +208,23 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
         nextTask();
       }, 1200);
     }
-  }, [retriesLeft, onIncorrect, nextTask]);
+  }, [onIncorrect, nextTask]);
 
   /**
    * Process a note input from the player
-   * Uses refs to get current task to avoid stale closure issues
+   * Uses refs for ALL state to avoid stale closure issues
    */
   const handleNoteInput = useCallback((note) => {
-    if (gameState !== GAME_STATES.PLAYING) return;
+    // Use ref for gameState check
+    if (gameStateRef.current !== GAME_STATES.PLAYING) return;
 
-    // Get fresh task from refs to avoid stale closure
+    // Get fresh values from refs
     const levelId = currentLevelIdRef.current;
     const taskIdx = currentTaskIndexRef.current;
     const lesson = levelId ? lessons[levelId] : null;
     const task = lesson?.tasks[taskIdx];
+    const seqProgress = sequenceProgressRef.current;
+    const diadProg = diadProgressRef.current;
 
     if (!task) return;
 
@@ -198,9 +238,10 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
         break;
 
       case 'sequence':
-        const expectedNote = task.notes[sequenceProgress.length];
+        const expectedNote = task.notes[seqProgress.length];
         if (note === expectedNote) {
-          const newProgress = [...sequenceProgress, note];
+          const newProgress = [...seqProgress, note];
+          sequenceProgressRef.current = newProgress;
           setSequenceProgress(newProgress);
 
           if (newProgress.length === task.notes.length) {
@@ -220,8 +261,9 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
         }
 
         // Check if this note is one of the expected notes
-        if (task.notes.includes(note) && !diadProgress.includes(note)) {
-          const newProgress = [...diadProgress, note];
+        if (task.notes.includes(note) && !diadProg.includes(note)) {
+          const newProgress = [...diadProg, note];
+          diadProgressRef.current = newProgress;
           setDiadProgress(newProgress);
 
           if (newProgress.length === task.notes.length) {
@@ -243,12 +285,22 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
       default:
         break;
     }
-  }, [gameState, sequenceProgress, diadProgress, handleCorrect, handleIncorrect]);
+  }, [handleCorrect, handleIncorrect]);
 
   /**
    * Reset the game state
    */
   const reset = useCallback(() => {
+    // Update all refs
+    gameStateRef.current = GAME_STATES.IDLE;
+    currentLevelIdRef.current = null;
+    currentTaskIndexRef.current = 0;
+    scoreRef.current = 0;
+    sequenceProgressRef.current = [];
+    diadProgressRef.current = [];
+    retriesLeftRef.current = 2;
+
+    // Update state
     setGameState(GAME_STATES.IDLE);
     setCurrentLevelId(null);
     setCurrentTaskIndex(0);
