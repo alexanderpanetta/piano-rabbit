@@ -43,6 +43,24 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
   // Note input handler reference
   const inputHandlerRef = useRef(null);
 
+  // Refs to track current values for use in timeouts (avoid stale closures)
+  const currentTaskIndexRef = useRef(0);
+  const scoreRef = useRef(0);
+  const currentLevelIdRef = useRef(null);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    currentTaskIndexRef.current = currentTaskIndex;
+  }, [currentTaskIndex]);
+
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+
+  useEffect(() => {
+    currentLevelIdRef.current = currentLevelId;
+  }, [currentLevelId]);
+
   // Get current lesson and task
   const currentLesson = currentLevelId ? lessons[currentLevelId] : null;
   const currentTask = currentLesson?.tasks[currentTaskIndex] || null;
@@ -76,6 +94,12 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
    * Start a new level
    */
   const startLevel = useCallback((levelId) => {
+    // Update refs immediately for use in callbacks
+    currentLevelIdRef.current = levelId;
+    currentTaskIndexRef.current = 0;
+    scoreRef.current = 0;
+
+    // Update state
     setCurrentLevelId(levelId);
     setCurrentTaskIndex(0);
     setScore(0);
@@ -88,30 +112,41 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
 
   /**
    * Move to the next task or complete the level
+   * Uses refs to avoid stale closure issues when called from setTimeout
    */
   const nextTask = useCallback(() => {
-    if (currentTaskIndex + 1 >= totalTasks) {
+    const idx = currentTaskIndexRef.current;
+    const finalScore = scoreRef.current;
+    const levelId = currentLevelIdRef.current;
+    const lesson = levelId ? lessons[levelId] : null;
+    const total = lesson?.tasks.length || 10;
+
+    if (idx + 1 >= total) {
       // Level complete
-      const medal = getMedalForScore(score + (taskResult === TASK_RESULT.CORRECT ? 1 : 0));
+      const medal = getMedalForScore(finalScore, total);
       setGameState(GAME_STATES.COMPLETE);
-      onLevelComplete?.(currentLevelId, medal, score + (taskResult === TASK_RESULT.CORRECT ? 1 : 0));
+      onLevelComplete?.(levelId, medal, finalScore);
     } else {
-      // Next task
-      setCurrentTaskIndex(prev => prev + 1);
+      // Next task - update both ref and state
+      currentTaskIndexRef.current = idx + 1;
+      setCurrentTaskIndex(idx + 1);
       setTaskResult(TASK_RESULT.PENDING);
       setSequenceProgress([]);
       setDiadProgress([]);
-      setRetriesLeft(currentLesson?.tasks[currentTaskIndex + 1]?.maxRetries || 2);
+      setRetriesLeft(lesson?.tasks[idx + 1]?.maxRetries || 2);
       setGameState(GAME_STATES.PLAYING);
     }
-  }, [currentTaskIndex, totalTasks, score, taskResult, currentLevelId, currentLesson, onLevelComplete]);
+  }, [onLevelComplete]);
 
   /**
    * Handle a correct task completion
    */
   const handleCorrect = useCallback(() => {
+    // Update ref immediately to avoid stale closure in timeout
+    scoreRef.current = scoreRef.current + 1;
+
     setTaskResult(TASK_RESULT.CORRECT);
-    setScore(prev => prev + 1);
+    setScore(scoreRef.current);
     setGameState(GAME_STATES.FEEDBACK);
     onCorrect?.();
 

@@ -83,21 +83,46 @@ const Confetti = ({ active = false, duration = 3000 }) => {
   };
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-      {pieces.map((piece) => (
-        <div
-          key={piece.id}
-          className="confetti-piece"
-          style={{
-            left: `${piece.left}%`,
-            animationDelay: `${piece.delay}s`,
-            animationDuration: `${piece.duration}s`
-          }}
-        >
-          {renderShape(piece)}
-        </div>
-      ))}
-    </div>
+    <>
+      <style>
+        {`
+          @keyframes confetti-fall {
+            0% {
+              transform: translateY(-10vh) rotate(0deg);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(110vh) rotate(720deg);
+              opacity: 0;
+            }
+          }
+        `}
+      </style>
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        zIndex: 50
+      }}>
+        {pieces.map((piece) => (
+          <div
+            key={piece.id}
+            style={{
+              position: 'absolute',
+              left: `${piece.left}%`,
+              top: 0,
+              animation: `confetti-fall ${piece.duration}s ease-out ${piece.delay}s forwards`
+            }}
+          >
+            {renderShape(piece)}
+          </div>
+        ))}
+      </div>
+    </>
   );
 };
 

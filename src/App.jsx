@@ -88,8 +88,18 @@ function App() {
   // Show loading while progress loads
   if (!isLoaded) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-2xl text-gray-600 animate-pulse">
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'linear-gradient(135deg, #e8f4fd 0%, #f3e8ff 100%)',
+      }}>
+        <div style={{
+          fontSize: '24px',
+          color: '#666',
+          fontFamily: "'Nunito', sans-serif",
+        }}>
           Loading...
         </div>
       </div>
@@ -140,7 +150,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-hidden">
+    <div style={{ minHeight: '100vh', width: '100%', overflow: 'hidden' }}>
       {renderScreen()}
     </div>
   );
