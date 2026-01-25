@@ -1,6 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { PIANO_KEYS, WHITE_KEYS, KEYBOARD_MAP } from '../utils/lessonData';
-import { getNoteInputHandler } from '../utils/noteInputHandler';
 
 const Piano = ({
   onNotePlay,
@@ -11,13 +10,11 @@ const Piano = ({
   showLabels = true
 }) => {
   const [pressedKeys, setPressedKeys] = useState(new Set());
-  const inputHandler = useRef(getNoteInputHandler());
 
   const handleKeyPress = useCallback((note) => {
     if (disabled) return;
     setPressedKeys(prev => new Set(prev).add(note));
     onNotePlay?.(note);
-    inputHandler.current.registerTouch(note);
 
     setTimeout(() => {
       setPressedKeys(prev => {
@@ -25,7 +22,6 @@ const Piano = ({
         newSet.delete(note);
         return newSet;
       });
-      inputHandler.current.releaseTouch(note);
     }, 150);
   }, [disabled, onNotePlay]);
 

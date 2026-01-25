@@ -68,27 +68,13 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
 
   /**
    * Get notes that should be highlighted for the current task
+   * Currently returns empty - no hints shown on piano keys
+   * The instruction text tells the player which note to play
    */
   const getHighlightedNotes = useCallback(() => {
-    if (!currentTask || gameState !== GAME_STATES.PLAYING) return [];
-
-    switch (currentTask.type) {
-      case 'single':
-        return [currentTask.note];
-      case 'sequence':
-        // Highlight the next note in the sequence
-        const nextNoteIndex = sequenceProgress.length;
-        if (nextNoteIndex < currentTask.notes.length) {
-          return [currentTask.notes[nextNoteIndex]];
-        }
-        return [];
-      case 'diad':
-        // Highlight all notes that haven't been played yet
-        return currentTask.notes.filter(note => !diadProgress.includes(note));
-      default:
-        return [];
-    }
-  }, [currentTask, gameState, sequenceProgress, diadProgress]);
+    // No highlighting - player must learn the note positions
+    return [];
+  }, []);
 
   /**
    * Start a new level
@@ -270,18 +256,9 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
     }
   }, [currentLevelId, startLevel]);
 
-  // Initialize note input handler
-  useEffect(() => {
-    inputHandlerRef.current = getNoteInputHandler();
-    inputHandlerRef.current.init({
-      onNoteDetected: handleNoteInput,
-      onNoteReleased: () => {}
-    });
-
-    return () => {
-      inputHandlerRef.current?.destroy();
-    };
-  }, [handleNoteInput]);
+  // Note: noteInputHandler is available for future audio detection mode
+  // Currently we use direct calls from Piano component, so we don't
+  // initialize it here to avoid double-processing notes
 
   // Cleanup timeout on unmount
   useEffect(() => {
