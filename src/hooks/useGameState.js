@@ -144,11 +144,18 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
 
   /**
    * Handle an incorrect attempt
+   * Uses refs to get current task to avoid stale closure issues
    */
   const handleIncorrect = useCallback(() => {
     onIncorrect?.();
 
-    if (currentTask?.type !== 'single' && retriesLeft > 0) {
+    // Get fresh task from refs
+    const levelId = currentLevelIdRef.current;
+    const taskIdx = currentTaskIndexRef.current;
+    const lesson = levelId ? lessons[levelId] : null;
+    const task = lesson?.tasks[taskIdx];
+
+    if (task?.type !== 'single' && retriesLeft > 0) {
       // For sequences/diads, allow retries
       setRetriesLeft(prev => prev - 1);
       setSequenceProgress([]);
@@ -164,17 +171,26 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
         nextTask();
       }, 1200);
     }
-  }, [currentTask, retriesLeft, onIncorrect, nextTask]);
+  }, [retriesLeft, onIncorrect, nextTask]);
 
   /**
    * Process a note input from the player
+   * Uses refs to get current task to avoid stale closure issues
    */
   const handleNoteInput = useCallback((note) => {
-    if (gameState !== GAME_STATES.PLAYING || !currentTask) return;
+    if (gameState !== GAME_STATES.PLAYING) return;
 
-    switch (currentTask.type) {
+    // Get fresh task from refs to avoid stale closure
+    const levelId = currentLevelIdRef.current;
+    const taskIdx = currentTaskIndexRef.current;
+    const lesson = levelId ? lessons[levelId] : null;
+    const task = lesson?.tasks[taskIdx];
+
+    if (!task) return;
+
+    switch (task.type) {
       case 'single':
-        if (note === currentTask.note) {
+        if (note === task.note) {
           handleCorrect();
         } else {
           handleIncorrect();
@@ -182,12 +198,12 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
         break;
 
       case 'sequence':
-        const expectedNote = currentTask.notes[sequenceProgress.length];
+        const expectedNote = task.notes[sequenceProgress.length];
         if (note === expectedNote) {
           const newProgress = [...sequenceProgress, note];
           setSequenceProgress(newProgress);
 
-          if (newProgress.length === currentTask.notes.length) {
+          if (newProgress.length === task.notes.length) {
             // Sequence complete
             handleCorrect();
           }
@@ -204,11 +220,11 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
         }
 
         // Check if this note is one of the expected notes
-        if (currentTask.notes.includes(note) && !diadProgress.includes(note)) {
+        if (task.notes.includes(note) && !diadProgress.includes(note)) {
           const newProgress = [...diadProgress, note];
           setDiadProgress(newProgress);
 
-          if (newProgress.length === currentTask.notes.length) {
+          if (newProgress.length === task.notes.length) {
             // All notes played
             handleCorrect();
           } else {
@@ -227,7 +243,7 @@ export const useGameState = ({ onCorrect, onIncorrect, onLevelComplete }) => {
       default:
         break;
     }
-  }, [gameState, currentTask, sequenceProgress, diadProgress, handleCorrect, handleIncorrect]);
+  }, [gameState, sequenceProgress, diadProgress, handleCorrect, handleIncorrect]);
 
   /**
    * Reset the game state
